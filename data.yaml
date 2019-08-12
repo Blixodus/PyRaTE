@@ -1,13 +1,21 @@
 ---
 view:
-    m: 1000              # Number of pixels horizontally
-    k: 1000              # Number of pixels vertically
+    m: 200               # Number of pixels horizontally
+    k: 200               # Number of pixels vertically
     fov_horizontal: 90   # Field of view horizontally
     fov_vertical: 90     # Field of view vertically
-    eye: [0, 1, 0]       # Eye location in space
+    eye: [0, 0, 0]       # Eye location in space
     display: [1, 0, 0]   # Centre point of display
-spheres:
-    sp1:
-        c: [10, 0, 0]    # Centre
-        r: 2             # Radius
+objects:
+    spheres:
+        sp1:
+            c: [10, 0, 0]    # Centre
+            r: 2             # Radius
+            col: [0, 255, 0] # Color in RGB
+        sp2:
+            c: [20, 3, 0]
+            r: 8
+            col: [0, 0, 255]
+    #polygons:
+     #   p1:
 ...

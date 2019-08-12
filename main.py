@@ -26,12 +26,41 @@ def compute_ray(m, k, i, j, eye, display, px_width, px_height):
 def sphere_intersection(e, d, sp):
     c = sp.get('c')
     r = sp.get('r')
+    # Calculate discriminant
     dis = (d@(e-c))**2-(d@d)*((e-c)@(e-c)-r**2)
+    # If discriminant is 0, return unique solution
     if(dis == 0):
         return (-d@(e-c)+np.sqrt(dis))/(d@d)
+    # If discriminant is positive, return minimum distance
     elif(dis > 0):
         return np.minimum((-d@(e-c)+np.sqrt(dis))/(d@d), (-d@(e-c)-np.sqrt(dis))/(d@d))
+    # Otherwise return value behind camera
     return -1
+
+def polygon_intersection():
+    return -1
+
+# Find the closest object that instersects a ray
+def find_closest(eye, ray, obj):
+    closest_obj = ('none', 'none')
+    t = -1
+    # Test for every type of object
+    for curr_type_name in obj:
+        curr_type = obj.get(curr_type_name)
+        # Test for every object in selected type
+        for curr_obj_name in curr_type:
+            curr_obj = curr_type.get(curr_obj_name)
+            # If the object is a sphere, calculate ray and sphere intersections
+            if(curr_type_name == 'spheres'):
+                t_new = sphere_intersection(eye, ray, curr_obj)
+            # If the object is a polygon, calculate ray and polygon intersections
+            if(curr_type_name == 'spheres'):
+                t_new = polygon_intersection()
+            # Change current closest object if this one is closer
+            if(t_new>=0 and (t_new<t or t<0)):
+                t = t_new
+                closest_obj = (curr_type_name, curr_obj_name)
+    return (t, closest_obj)
 
 # Read variables and other data from YAML file
 def read_data(name):
@@ -60,17 +89,18 @@ def main():
     fov_vertical = defs.get('view').get('fov_vertical')
     eye = np.array(defs.get('view').get('eye'))
     display = np.array(defs.get('view').get('display'))
-    sp1 = defs.get('spheres').get('sp1')
+    objects = defs.get('objects')
     
-    pixels = np.ones((m, k, 3), dtype = np.int8)*255
+    pixels = np.ones((m, k, 3), dtype = np.uint8)*20
     px_width = 2*np.tan(np.deg2rad(fov_horizontal)/2)/m
     px_height = 2*np.tan(np.deg2rad(fov_vertical)/2)/k
+    
     for i in range(m):
         for j in range(k):
             ray = compute_ray(m, k, i, j, eye, display, px_width, px_height)
-            t = sphere_intersection(eye, ray, sp1)
+            t, closest_obj = find_closest(eye, ray, objects)
             if(t>=0):
-                pixels[i, j] = np.asarray([255, 0, 0])
+                pixels[i, j] = objects.get(closest_obj[0]).get(closest_obj[1]).get('col')
     create_image(m, k, pixels)
 
 if __name__ == "__main__":
