@@ -54,7 +54,7 @@ def find_closest(eye, ray, obj):
             if(curr_type_name == 'spheres'):
                 t_new = sphere_intersection(eye, ray, curr_obj)
             # If the object is a polygon, calculate ray and polygon intersections
-            if(curr_type_name == 'spheres'):
+            if(curr_type_name == 'polygon'):
                 t_new = polygon_intersection()
             # Change current closest object if this one is closer
             if(t_new>=0 and (t_new<t or t<0)):
