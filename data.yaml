@@ -1,21 +1,48 @@
 ---
 view:
-    m: 200               # Number of pixels horizontally
-    k: 200               # Number of pixels vertically
-    fov_horizontal: 90   # Field of view horizontally
-    fov_vertical: 90     # Field of view vertically
-    eye: [0, 0, 0]       # Eye location in space
-    display: [1, 0, 0]   # Centre point of display
+    m: 500              # Number of pixels horizontally
+    k: 500              # Number of pixels vertically
+    fov_horizontal: 90  # Field of view horizontally
+    fov_vertical: 90    # Field of view vertically
+    eye: [0, 0, 0]      # Eye location in space
+    display: [1, 0, 0]  # Centre point of display
+    dist: 70            # Rendering distance
+    ssample: 4         # Supersampling factor
 objects:
     spheres:
         sp1:
             c: [10, 0, 0]    # Centre
             r: 2             # Radius
             col: [0, 255, 0] # Color in RGB
+            refl: 
+            refr:
         sp2:
-            c: [20, 3, 0]
-            r: 8
+            c: [10, 3, 0]
+            r: 2
             col: [0, 0, 255]
-    #polygons:
-     #   p1:
+            refl:
+            refr:
+        sp3:
+            c: [40, -5, 2]
+            r: 15
+            col: [120, 40, 70]
+            refl:
+            refr:
+    triangles:
+        t1:
+            p1:
+            p2:
+            p3:
+            col:
+            refl:
+            refr:
+    planes:
+        floor:
+            p: [0, 0, -5]
+            norm_vect: [0, 0, 1]
+            col: [255, 255, 255]
+lights:
+    l1:
+        pos: [7, ]
+        bright: 100
 ...
