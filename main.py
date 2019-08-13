@@ -132,7 +132,7 @@ def main():
         for j in range(k):
             ray = compute_ray(m, k, i, j, eye, display, px_width, px_height)
             t, closest_obj = find_closest(eye, ray, objects)
-            if(t>=0 and t<=view_distance):
+            if(t>=0 and (t<=view_distance or view_distance == -1)):
                 pixels[i, j] = objects.get(closest_obj[0]).get(closest_obj[1]).get('col')
     real_pixels = super_sample(m, k, m_base, k_base, pixels, ssample)
     create_image(m_base, k_base, real_pixels, "rt_output.png")

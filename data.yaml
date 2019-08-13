@@ -1,13 +1,13 @@
 ---
 view:
-    m: 500              # Number of pixels horizontally
-    k: 500              # Number of pixels vertically
+    m: 200              # Number of pixels horizontally
+    k: 200              # Number of pixels vertically
     fov_horizontal: 90  # Field of view horizontally
     fov_vertical: 90    # Field of view vertically
     eye: [0, 0, 0]      # Eye location in space
     display: [1, 0, 0]  # Centre point of display
-    dist: 70            # Rendering distance
-    ssample: 4         # Supersampling factor
+    dist: 70            # Rendering distance (-1 for infinite)
+    ssample: 2          # Supersampling factor
 objects:
     spheres:
         sp1:
