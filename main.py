@@ -9,6 +9,7 @@ Created on Fri Aug  9 12:45:07 2019
 import numpy as np
 import PIL
 import yaml
+import time
 
 # Compute ray e+t*d based on eye position and pixel i, j, returns d
 def compute_ray(m, k, i, j, eye, display, px_width, px_height):
@@ -53,6 +54,7 @@ def plane_intersection(e, d, pl):
 def find_closest(eye, ray, obj, eps):
     closest_obj = ('none', 'none')
     t = -1
+    # Calculate new ray
     # Test for every type of object
     for curr_type_name in obj:
         curr_type = obj.get(curr_type_name)
@@ -75,7 +77,7 @@ def find_closest(eye, ray, obj, eps):
     return (t, closest_obj)
 
 # Compute reflection of the ray coming from the currently in use eye
-def reflection_ray(eye, ray, t, obj, obj_type):
+def reflection_ray(eye, ray, t, obj, obj_type):    
     # Calculate reflection point (new eye)
     r_point = eye+t*ray
     # Calculate normal vector
@@ -94,8 +96,15 @@ def reflection_ray(eye, ray, t, obj, obj_type):
         norm_vect = np.array(obj.get('norm_vect'))
         if(norm_vect@ray<0):
             norm_vect = -norm_vect
+    # Normalize normal vector
+    norm_vect = -norm_vect/np.linalg.norm(norm_vect)
+    # Householder matrix
+#    R = np.eye(3)-2*np.outer(norm_vect,norm_vect)
     # Calculate new ray
-    r_ray = ray+2*(ray@norm_vect)*norm_vect
+#    r_ray = R@ray
+    
+    r_ray = ray-2*(ray@norm_vect)*norm_vect
+    
 #    r_parall = (ray@norm_vect)/(norm_vect@norm_vect)*norm_vect
 #    r_ortho = ray - r_parall
 #    w = np.cross(norm_vect, r_ortho)
@@ -109,6 +118,34 @@ def reflection_ray(eye, ray, t, obj, obj_type):
         print(np.arccos(ray@norm_vect), np.arccos(r_ray@norm_vect))
     # Return new eye and ray
     return r_point, r_ray
+
+# Compute refraction of the ray
+def refraction_ray(eye, ray, t, obj, obj_type):
+    pass
+
+# Computes colors recursively
+def compute_color(eye, ray, obj, eps, refl, curr, view_dist):
+    if(curr <= refl):
+        # Find closest object
+        t, closest_obj = find_closest(eye, ray, obj, eps)
+        if(t>=0 and (t<=view_dist or view_dist == -1)):
+            obj_type = closest_obj[0]
+            o = obj.get(closest_obj[0]).get(closest_obj[1])
+            # Compute reflection eye and ray
+            eye_refl, ray_refl = reflection_ray(eye, ray, t, o, obj_type)
+            # Compute color from reflection
+            b_refl, color_refl, refl_obj = compute_color(eye_refl, ray_refl, obj, eps, refl, curr+1, view_dist)
+            # Return final color
+            if(b_refl):
+                return True, 0.9*np.array(o.get('col'))+0.1*color_refl, closest_obj[1]+" -> "+refl_obj
+            else:
+                return True, np.array(o.get('col')), closest_obj[1]+" -> None"
+        # No closest object
+        else:
+            return False, [0, 0, 0], "Nothing"
+    # Reflection limit reached
+    return False, [0, 0, 0], "Limit"
+    
 
 # Read variables and other data from YAML file
 def read_data(name):
@@ -141,6 +178,7 @@ def super_sample(m, k, m_base, k_base, pixels, ssample):
 
 
 def main():
+    begin = time.time()
     # Get values from file
     defs = read_data("data.yaml")
     # Load all view data
@@ -154,30 +192,40 @@ def main():
     view_distance = view.get('dist')
     ssample = int(view.get('ssample'))
     eps = view.get('epsilon')
+    refl_num = view.get('refl_num')
+    debug = view.get('debug')
     # Load all objects in scene
     objects = defs.get('objects')
     
     m = ssample*m_base
     k = ssample*m_base
-    print(m, k)
+    print("Rendering supersample image of size", m, "x", k)
     pixels = np.ones((m, k, 3), dtype = np.uint64)*20
     px_width = 2*np.tan(np.deg2rad(fov_horizontal)/2)/m
     px_height = 2*np.tan(np.deg2rad(fov_vertical)/2)/k
-        
     
     for i in range(m):
+        if(i%(m/10) == 0):
+            print("Computing ray {} of {} ({}%)".format(i*k, m*k, i/m*100))
         for j in range(k):
             ray = compute_ray(m, k, i, j, eye, display, px_width, px_height)
-            t, closest_obj = find_closest(eye, ray, objects, eps)
-            if(t>=0 and (t<=view_distance or view_distance == -1)):
-                pixels[i, j] = objects.get(closest_obj[0]).get(closest_obj[1]).get('col')
-                new_eye, new_ray = reflection_ray(eye, ray, t, objects.get(closest_obj[0]).get(closest_obj[1]), closest_obj[0])
-                t2, closest_obj2 = find_closest(new_eye, new_ray, objects, eps)
-                if(t2>=0 and (t2<=view_distance or view_distance == -1)):
-                    pixels[i, j] = pixels[i, j]/2+np.array(objects.get(closest_obj2[0]).get(closest_obj2[1]).get('col'))/2
-    real_pixels = super_sample(m, k, m_base, k_base, pixels, ssample)
-    create_image(m_base, k_base, real_pixels, "rt_output.png")
+            b, color, obj = compute_color(eye, ray, objects, eps, refl_num, 0, view_distance)
+            if(b):
+                pixels[i, j] = color
+            if(debug == 1 and i%(m/10) == 0 and j%(k/10) == 0):
+                print("DEBUG:", i, j, obj, j)
+            if(debug == 2 and obj != "Nothing"):
+                print("DEBUG:", i, j, obj, j)
+                    
+    print("Creating file named rt_output_big.png for large aliased image")
     create_image(m, k, pixels, "rt_output_big.png")
+    print("Rendering final image of size", m_base, "x", k_base)
+    real_pixels = super_sample(m, k, m_base, k_base, pixels, ssample)
+    print("Creating file named rt_output.png for anti-aliased image")
+    create_image(m_base, k_base, real_pixels, "rt_output.png")
+    
+    end = time.time()
+    print("Rendered in", end-begin, "seconds")
 
 if __name__ == "__main__":
     main()

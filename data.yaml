@@ -10,6 +10,7 @@ view:
     ssample: 4          # Supersampling factor
     epsilon: 0.0001      
     refl_num: 2
+    debug: 1
 objects:
     spheres:
         sp1:
@@ -38,13 +39,13 @@ objects:
             col:
             refl:
             refr:
-    planes:
-        floor:
-            p: [0, 0, -1]           # A point on the plane
-            norm_vect: [0, 0, 1]    # The normal vector to the plane
-            col: [255, 255, 255]    # Color of the plane
-            refl:
-            refr:
+#    planes:
+#        floor:
+#            p: [0, 0, -1]           # A point on the plane
+#            norm_vect: [0, 0, 1]    # The normal vector to the plane
+#            col: [255, 255, 255]    # Color of the plane
+#            refl:
+#            refr:
 lights:
     l1:
         pos: [7, ]
