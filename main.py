@@ -82,7 +82,7 @@ def reflection_ray(eye, ray, t, obj, obj_type):
     norm_vect = np.zeros(3)
     if(obj_type == 'spheres'):
         norm_vect = r_point-np.array(obj.get('c'))
-        if(norm_vect@ray>0):
+        if(norm_vect@ray<0):
             norm_vect = -norm_vect
     elif(obj_type == 'triangles'):
         v1 = np.array(obj.get('p1'))-np.array(obj.get('p2'))
@@ -92,7 +92,7 @@ def reflection_ray(eye, ray, t, obj, obj_type):
             norm_vect = np.cross(v2, v1)
     elif(obj_type == 'planes'):
         norm_vect = np.array(obj.get('norm_vect'))
-        if(norm_vect@ray>0):
+        if(norm_vect@ray<0):
             norm_vect = -norm_vect
     # Calculate new ray
     r_ray = ray+2*(ray@norm_vect)*norm_vect
@@ -171,10 +171,10 @@ def main():
             t, closest_obj = find_closest(eye, ray, objects, eps)
             if(t>=0 and (t<=view_distance or view_distance == -1)):
                 pixels[i, j] = objects.get(closest_obj[0]).get(closest_obj[1]).get('col')
-#                new_eye, new_ray = reflection_ray(eye, ray, t, objects.get(closest_obj[0]).get(closest_obj[1]), closest_obj[0])
-#                t2, closest_obj2 = find_closest(new_eye, new_ray, objects, eps)
-#                if(t2>=0 and (t2<=view_distance or view_distance == -1)):
-#                    pixels[i, j] = pixels[i, j]/2+np.array(objects.get(closest_obj2[0]).get(closest_obj2[1]).get('col'))/2
+                new_eye, new_ray = reflection_ray(eye, ray, t, objects.get(closest_obj[0]).get(closest_obj[1]), closest_obj[0])
+                t2, closest_obj2 = find_closest(new_eye, new_ray, objects, eps)
+                if(t2>=0 and (t2<=view_distance or view_distance == -1)):
+                    pixels[i, j] = pixels[i, j]/2+np.array(objects.get(closest_obj2[0]).get(closest_obj2[1]).get('col'))/2
     real_pixels = super_sample(m, k, m_base, k_base, pixels, ssample)
     create_image(m_base, k_base, real_pixels, "rt_output.png")
     create_image(m, k, pixels, "rt_output_big.png")
