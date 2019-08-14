@@ -1,4 +1,9 @@
 ---
+settings:
+    ssample: 4          # Supersampling factor
+    epsilon: 0.0001     # 
+    refl_num: 2         # Maximum number of reflections
+    debug: 1            # Debug on = 1, 2
 view:
     m: 100              # Number of pixels horizontally
     k: 100              # Number of pixels vertically
@@ -7,18 +12,14 @@ view:
     eye: [0, 0, 0]      # Eye location in space
     display: [1, 0, 0]  # Centre point of display
     dist: -1            # Rendering distance (-1 for infinite)
-    ssample: 4          # Supersampling factor
-    epsilon: 0.0001      
-    refl_num: 2
-    debug: 1
 objects:
     spheres:
         sp1:
-            c: [10, 0, 0]    # Centre
-            r: 2             # Radius
-            col: [0, 255, 0] # Color in RGB
-            refl: 
-            refr:
+            c: [10, 0, 0]       # Centre
+            r: 2                # Radius
+            col: [0, 255, 0]    # Color in RGB
+            refl:               # Reflectiveness
+            refr:               # Refractiveness
         sp2:
             c: [10, 5, 0]
             r: 2

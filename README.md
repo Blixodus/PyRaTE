@@ -7,3 +7,4 @@ Modify data.yaml to modify environment
  - Drawing spheres
  - Drawing planes
  - Supersampling
+ - Reflections

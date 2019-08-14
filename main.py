@@ -181,6 +181,12 @@ def main():
     begin = time.time()
     # Get values from file
     defs = read_data("data.yaml")
+    # Load all settings
+    settings = defs.get('settings')
+    ssample = int(settings.get('ssample'))
+    eps = settings.get('epsilon')
+    refl_num = settings.get('refl_num')
+    debug = settings.get('debug')
     # Load all view data
     view = defs.get('view')
     m_base = int(view.get('m'))
@@ -190,10 +196,6 @@ def main():
     eye = np.array(view.get('eye'))
     display = np.array(view.get('display'))
     view_distance = view.get('dist')
-    ssample = int(view.get('ssample'))
-    eps = view.get('epsilon')
-    refl_num = view.get('refl_num')
-    debug = view.get('debug')
     # Load all objects in scene
     objects = defs.get('objects')
     
