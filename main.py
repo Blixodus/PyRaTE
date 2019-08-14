@@ -108,7 +108,7 @@ def reflection_ray(eye, ray, t, obj, obj_type):
         print(r_point, np.array(obj.get('c')), ray, norm_vect, r_ray)
         print(np.arccos(ray@norm_vect), np.arccos(r_ray@norm_vect))
     # Return new eye and ray
-    return r_point, -r_ray
+    return r_point, r_ray
 
 # Read variables and other data from YAML file
 def read_data(name):
