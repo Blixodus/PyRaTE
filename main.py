@@ -30,10 +30,10 @@ def sphere_intersection(e, d, sp):
     dis = (d@(e-c))**2-(d@d)*((e-c)@(e-c)-r**2)
     # If discriminant is 0, return unique solution
     if(dis == 0):
-        return (-d@(e-c)+np.sqrt(dis))/(d@d)
+        return (-d@(e-c))/(d@d)
     # If discriminant is positive, return minimum distance
     elif(dis > 0):
-        return np.minimum((-d@(e-c)+np.sqrt(dis))/(d@d), (-d@(e-c)-np.sqrt(dis))/(d@d))
+        return np.minimum(((-d)@(e-c)+np.sqrt(dis))/(d@d), ((-d)@(e-c)-np.sqrt(dis))/(d@d))
     # Otherwise return value behind camera
     return -1
 
@@ -50,7 +50,7 @@ def plane_intersection(e, d, pl):
     return -1
 
 # Find the closest object that instersects a ray
-def find_closest(eye, ray, obj):
+def find_closest(eye, ray, obj, eps):
     closest_obj = ('none', 'none')
     t = -1
     # Test for every type of object
@@ -63,16 +63,52 @@ def find_closest(eye, ray, obj):
             if(curr_type_name == 'spheres'):
                 t_new = sphere_intersection(eye, ray, curr_obj)
             # If the object is a triangle, calculate ray and triangle intersections
-            if(curr_type_name == 'triangles'):
+            elif(curr_type_name == 'triangles'):
                 t_new = triangle_intersection()
             # If the object is a plane, calculate ray and plane intersections
-            if(curr_type_name == 'planes'):
+            elif(curr_type_name == 'planes'):
                 t_new = plane_intersection(eye, ray, curr_obj)
             # Change current closest object if this one is closer
-            if(t_new>=0 and (t_new<t or t<0)):
+            if(t_new>eps and (t_new<t or t<0)):
                 t = t_new
                 closest_obj = (curr_type_name, curr_obj_name)
     return (t, closest_obj)
+
+# Compute reflection of the ray coming from the currently in use eye
+def reflection_ray(eye, ray, t, obj, obj_type):
+    # Calculate reflection point (new eye)
+    r_point = eye+t*ray
+    # Calculate normal vector
+    norm_vect = np.zeros(3)
+    if(obj_type == 'spheres'):
+        norm_vect = r_point-np.array(obj.get('c'))
+        if(norm_vect@ray>0):
+            norm_vect = -norm_vect
+    elif(obj_type == 'triangles'):
+        v1 = np.array(obj.get('p1'))-np.array(obj.get('p2'))
+        v2 = np.array(obj.get('p1'))-np.array(obj.get('p3'))
+        norm_vect = np.cross(v1, v2)
+        if(norm_vect@ray<0):
+            norm_vect = np.cross(v2, v1)
+    elif(obj_type == 'planes'):
+        norm_vect = np.array(obj.get('norm_vect'))
+        if(norm_vect@ray>0):
+            norm_vect = -norm_vect
+    # Calculate new ray
+    r_ray = ray+2*(ray@norm_vect)*norm_vect
+#    r_parall = (ray@norm_vect)/(norm_vect@norm_vect)*norm_vect
+#    r_ortho = ray - r_parall
+#    w = np.cross(norm_vect, r_ortho)
+#    x1 = np.cos(np.pi)/np.linalg.norm(r_ortho)
+#    x2 = np.sin(np.pi)/np.linalg.norm(w)
+#    r_ortho_rot = np.linalg.norm(r_ortho)*(x1*r_ortho+x2*w)
+#    r_ray = r_ortho_rot+r_parall
+    
+    if(obj_type == 'sphere'):
+        print(r_point, np.array(obj.get('c')), ray, norm_vect, r_ray)
+        print(np.arccos(ray@norm_vect), np.arccos(r_ray@norm_vect))
+    # Return new eye and ray
+    return r_point, -r_ray
 
 # Read variables and other data from YAML file
 def read_data(name):
@@ -117,13 +153,14 @@ def main():
     display = np.array(view.get('display'))
     view_distance = view.get('dist')
     ssample = int(view.get('ssample'))
+    eps = view.get('epsilon')
     # Load all objects in scene
     objects = defs.get('objects')
     
     m = ssample*m_base
     k = ssample*m_base
     print(m, k)
-    pixels = np.ones((m, k, 3), dtype = np.uint8)*20
+    pixels = np.ones((m, k, 3), dtype = np.uint64)*20
     px_width = 2*np.tan(np.deg2rad(fov_horizontal)/2)/m
     px_height = 2*np.tan(np.deg2rad(fov_vertical)/2)/k
         
@@ -131,12 +168,16 @@ def main():
     for i in range(m):
         for j in range(k):
             ray = compute_ray(m, k, i, j, eye, display, px_width, px_height)
-            t, closest_obj = find_closest(eye, ray, objects)
+            t, closest_obj = find_closest(eye, ray, objects, eps)
             if(t>=0 and (t<=view_distance or view_distance == -1)):
                 pixels[i, j] = objects.get(closest_obj[0]).get(closest_obj[1]).get('col')
+#                new_eye, new_ray = reflection_ray(eye, ray, t, objects.get(closest_obj[0]).get(closest_obj[1]), closest_obj[0])
+#                t2, closest_obj2 = find_closest(new_eye, new_ray, objects, eps)
+#                if(t2>=0 and (t2<=view_distance or view_distance == -1)):
+#                    pixels[i, j] = pixels[i, j]/2+np.array(objects.get(closest_obj2[0]).get(closest_obj2[1]).get('col'))/2
     real_pixels = super_sample(m, k, m_base, k_base, pixels, ssample)
     create_image(m_base, k_base, real_pixels, "rt_output.png")
-    #create_image(m, k, pixels, "rt_output_big.png")
+    create_image(m, k, pixels, "rt_output_big.png")
 
 if __name__ == "__main__":
     main()
