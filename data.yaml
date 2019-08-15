@@ -2,8 +2,10 @@
 settings:
     ssample: 4          # Supersampling factor
     epsilon: 0.0001     # Epsilon
-    refl_num: 0         # Maximum number of reflections and refractions
+    refl_num: 5         # Maximum number of reflections and refractions
     debug: 0            # Debug on = 1, 2
+    ambient_light: 
+    shadows: 1          # 0 disabled, 1 enabled
 view:
     m: 100              # Number of pixels horizontally
     k: 100              # Number of pixels vertically
@@ -26,12 +28,12 @@ objects:
             col: [0, 0, 255]
             refl: 0.5
             refr:
-#        sp3:
-#            c: [20, -5, -10]
-#            r: 15
-#            col: [120, 40, 70]
-#            refl: 1
-#            refr:
+        sp3:
+            c: [30, -5, -10]
+            r: 15
+            col: [120, 40, 70]
+            refl: 1
+            refr:
     triangles:
         t1:
             p1:
@@ -40,20 +42,20 @@ objects:
             col:
             refl:
             refr:
-#    planes:
-#        floor:
-#            p: [0, 0, -5]           # A point on the plane
-#            norm_vect: [0, 0, 1]    # The normal vector to the plane
-#            col: [255, 255, 255]    # Color of the plane
-#            refl: 1
-#            refr:
+    planes:
+        floor:
+            p: [0, 0, 5]           # A point on the plane
+            norm_vect: [0, 0, 1]    # The normal vector to the plane
+            col: [255, 255, 255]    # Color of the plane
+            refl: 1
+            refr:
 lights:
     l1:
-        pos: [7, 5, 10]
-        bright: 1.0
-        dist: 3
-    l2:
-        pos: [7, 0, 10]
+        pos: [7, 5, 0]
         bright: 1.0
         dist: 10
+    l2:
+        pos: [15, -5, -5]
+        bright: 1.0
+        dist: 30
 ...

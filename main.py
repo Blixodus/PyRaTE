@@ -54,7 +54,7 @@ def plane_intersection(e, d, pl):
     # If ray is not parallel to the plane
     if(d@norm_vect != 0):
         # Return distance
-        return ((e-p)@norm_vect)/(d@norm_vect)
+        return -((e-p)@norm_vect)/(d@norm_vect)
     return -1
 
 # Find the closest object that instersects a ray
@@ -89,25 +89,8 @@ def reflection_ray(eye, ray, t, obj, obj_type):
     r_point = eye+t*ray
     # Calculate normal vector
     norm_vect = norm_ray(obj_type, obj, r_point, ray)
-    
-    # Householder matrix
-#    R = np.eye(3)-2*np.outer(norm_vect,norm_vect)
     # Calculate new ray
-#    r_ray = R@ray
-    
     r_ray = ray-2*(ray@norm_vect)*norm_vect
-    
-#    r_parall = (ray@norm_vect)/(norm_vect@norm_vect)*norm_vect
-#    r_ortho = ray - r_parall
-#    w = np.cross(norm_vect, r_ortho)
-#    x1 = np.cos(np.pi)/np.linalg.norm(r_ortho)
-#    x2 = np.sin(np.pi)/np.linalg.norm(w)
-#    r_ortho_rot = np.linalg.norm(r_ortho)*(x1*r_ortho+x2*w)
-#    r_ray = r_ortho_rot+r_parall
-    eye+t*ray
-    if(obj_type == 'sphere'):
-        print(r_point, np.array(obj.get('c')), ray, norm_vect, r_ray)
-        print(np.arccos(ray@norm_vect), np.arccos(r_ray@norm_vect))
     # Return new eye and ray
     return r_point, r_ray
 
@@ -160,7 +143,7 @@ def shadow(eye, ray, t, lights, obj_type, obj, objects, eps):
     return bright
 
 # Computes colors recursively
-def compute_color(eye, ray, obj, eps, refl, curr, view_dist, lights):
+def compute_color(eye, ray, obj, eps, refl, curr, view_dist, lights, shad_enab):
     if(curr <= refl):
         # Find closest object
         t, closest_obj = find_closest(eye, ray, obj, eps)
@@ -170,13 +153,13 @@ def compute_color(eye, ray, obj, eps, refl, curr, view_dist, lights):
             # Compute reflection eye and ray
             eye_refl, ray_refl = reflection_ray(eye, ray, t, o, obj_type)
             # Compute color from reflection
-            b_refl, color_refl, refl_obj = compute_color(eye_refl, ray_refl, obj, eps, refl, curr+1, view_dist, lights)
+            b_refl, color_refl, refl_obj = compute_color(eye_refl, ray_refl, obj, eps, refl, curr+1, view_dist, lights, shad_enab)
             # Compute refraction eye and ray
 #            b_refr, eye_refr, ray_refr = refraction_ray(eye, ray, t, o, obj_type)
             # Compute color from refraction
-#            color_refr, refr_obj = compute_color(eye_refr, ray_refr, obj, eps, refl, curr+1, view_dist, lights)
-            # Compute shadow
-            shadow_fact = shadow(eye, ray, t, lights, obj_type, o, obj, eps)
+#            color_refr, refr_obj = compute_color(eye_refr, ray_refr, obj, eps, refl, curr+1, view_dist, lights, shad_enab)
+            # Compute shadow if enabled
+            shadow_fact = 1 if (shad_enab == 0) else shadow(eye, ray, t, lights, obj_type, o, obj, eps)
             # Return final color
             if(b_refl):
                 color = shadow_fact*((1-o.get('refl'))*np.array(o.get('col'))+o.get('refl')*color_refl)
@@ -231,6 +214,7 @@ def main():
     eps = settings.get('epsilon')
     refl_num = settings.get('refl_num')
     debug = settings.get('debug')
+    shad_enab = settings.get('shadows')
     # Load all view data
     view = defs.get('view')
     m_base = int(view.get('m'))
@@ -257,7 +241,7 @@ def main():
             print("Computing ray {} of {} ({}%)".format(i*k, m*k, i/m*100))
         for j in range(k):
             ray = compute_ray(m, k, i, j, eye, display, px_width, px_height)
-            b, color, obj = compute_color(eye, ray, objects, eps, refl_num, 0, view_distance, lights)
+            b, color, obj = compute_color(eye, ray, objects, eps, refl_num, 0, view_distance, lights, shad_enab)
             if(b):
                 pixels[i, j] = color
             if(debug == 1 and i%(m/10) == 0 and j%(k/10) == 0):
