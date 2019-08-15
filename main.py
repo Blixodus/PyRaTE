@@ -230,7 +230,7 @@ def main():
     lights = defs.get('lights')
     
     m = ssample*m_base
-    k = ssample*m_base
+    k = ssample*k_base
     print("Rendering supersample image of size", m, "x", k)
     pixels = np.ones((m, k, 3), dtype = np.uint64)*20
     px_width = 2*np.tan(np.deg2rad(fov_horizontal)/2)/m

@@ -8,3 +8,4 @@ Modify data.yaml to modify environment
  - Drawing planes
  - Supersampling
  - Reflections
+ - Shadows

@@ -1,14 +1,14 @@
 ---
 settings:
-    ssample: 4          # Supersampling factor
+    ssample: 1          # Supersampling factor
     epsilon: 0.0001     # Epsilon
     refl_num: 5         # Maximum number of reflections and refractions
     debug: 0            # Debug on = 1, 2
     ambient_light: 
     shadows: 1          # 0 disabled, 1 enabled
 view:
-    m: 100              # Number of pixels horizontally
-    k: 100              # Number of pixels vertically
+    m: 1920              # Number of pixels horizontally
+    k: 1200              # Number of pixels vertically
     fov_horizontal: 90  # Field of view horizontally
     fov_vertical: 90    # Field of view vertically
     eye: [0, 0, 0]      # Eye location in space
