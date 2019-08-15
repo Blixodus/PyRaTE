@@ -155,7 +155,8 @@ def shadow(eye, ray, t, lights, obj_type, obj, objects, eps):
             angle = np.arccos((norm_vect@shadow_ray)/(np.linalg.norm(norm_vect)*np.linalg.norm(shadow_ray)))
             if(angle < np.pi/2):
                 dimm = (np.pi/2-angle)/np.pi*2
-                bright += dimm*l.get('bright')
+                dist_factor = l.get('dist')/dist
+                bright += dist_factor*dimm*l.get('bright')
     return bright
 
 # Computes colors recursively

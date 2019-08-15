@@ -2,7 +2,7 @@
 settings:
     ssample: 4          # Supersampling factor
     epsilon: 0.0001     # Epsilon
-    refl_num: 1         # Maximum number of reflections and refractions
+    refl_num: 0         # Maximum number of reflections and refractions
     debug: 0            # Debug on = 1, 2
 view:
     m: 100              # Number of pixels horizontally
@@ -51,4 +51,9 @@ lights:
     l1:
         pos: [7, 5, 10]
         bright: 1.0
+        dist: 3
+    l2:
+        pos: [7, 0, 10]
+        bright: 1.0
+        dist: 10
 ...
