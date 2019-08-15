@@ -34,7 +34,14 @@ def sphere_intersection(e, d, sp):
         return (-d@(e-c))/(d@d)
     # If discriminant is positive, return minimum distance
     elif(dis > 0):
-        return np.minimum(((-d)@(e-c)+np.sqrt(dis))/(d@d), ((-d)@(e-c)-np.sqrt(dis))/(d@d))
+        dist1 = ((-d)@(e-c)+np.sqrt(dis))/(d@d)
+        dist2 = ((-d)@(e-c)-np.sqrt(dis))/(d@d)
+        # If one of the distances is negative, return the positive one
+        if(dist1 < 0):
+            return dist2
+        if(dist2 < 0):
+            return dist1
+        return np.minimum(dist1, dist2)
     # Otherwise return value behind camera
     return -1
 
@@ -81,8 +88,34 @@ def reflection_ray(eye, ray, t, obj, obj_type):
     # Calculate reflection point (new eye)
     r_point = eye+t*ray
     # Calculate normal vector
+    norm_vect = norm_ray(obj_type, obj, r_point, ray)
+    
+    # Householder matrix
+#    R = np.eye(3)-2*np.outer(norm_vect,norm_vect)
+    # Calculate new ray
+#    r_ray = R@ray
+    
+    r_ray = ray-2*(ray@norm_vect)*norm_vect
+    
+#    r_parall = (ray@norm_vect)/(norm_vect@norm_vect)*norm_vect
+#    r_ortho = ray - r_parall
+#    w = np.cross(norm_vect, r_ortho)
+#    x1 = np.cos(np.pi)/np.linalg.norm(r_ortho)
+#    x2 = np.sin(np.pi)/np.linalg.norm(w)
+#    r_ortho_rot = np.linalg.norm(r_ortho)*(x1*r_ortho+x2*w)
+#    r_ray = r_ortho_rot+r_parall
+    eye+t*ray
+    if(obj_type == 'sphere'):
+        print(r_point, np.array(obj.get('c')), ray, norm_vect, r_ray)
+        print(np.arccos(ray@norm_vect), np.arccos(r_ray@norm_vect))
+    # Return new eye and ray
+    return r_point, r_ray
+
+# Compute normal vector
+def norm_ray(obj_type, obj, r_point, ray):
     norm_vect = np.zeros(3)
     if(obj_type == 'spheres'):
+        # Normal vector is vector between point and centre
         norm_vect = r_point-np.array(obj.get('c'))
         if(norm_vect@ray<0):
             norm_vect = -norm_vect
@@ -98,33 +131,35 @@ def reflection_ray(eye, ray, t, obj, obj_type):
             norm_vect = -norm_vect
     # Normalize normal vector
     norm_vect = -norm_vect/np.linalg.norm(norm_vect)
-    # Householder matrix
-#    R = np.eye(3)-2*np.outer(norm_vect,norm_vect)
-    # Calculate new ray
-#    r_ray = R@ray
-    
-    r_ray = ray-2*(ray@norm_vect)*norm_vect
-    
-#    r_parall = (ray@norm_vect)/(norm_vect@norm_vect)*norm_vect
-#    r_ortho = ray - r_parall
-#    w = np.cross(norm_vect, r_ortho)
-#    x1 = np.cos(np.pi)/np.linalg.norm(r_ortho)
-#    x2 = np.sin(np.pi)/np.linalg.norm(w)
-#    r_ortho_rot = np.linalg.norm(r_ortho)*(x1*r_ortho+x2*w)
-#    r_ray = r_ortho_rot+r_parall
-    
-    if(obj_type == 'sphere'):
-        print(r_point, np.array(obj.get('c')), ray, norm_vect, r_ray)
-        print(np.arccos(ray@norm_vect), np.arccos(r_ray@norm_vect))
-    # Return new eye and ray
-    return r_point, r_ray
+    return norm_vect
 
 # Compute refraction of the ray
 def refraction_ray(eye, ray, t, obj, obj_type):
     pass
 
+# Compute how much light gets to a given point
+def shadow(eye, ray, t, lights, obj_type, obj, objects, eps):
+    # Calculate collision point
+    point = eye+t*ray
+    bright = 0.0
+    norm_vect = norm_ray(obj_type, obj, point, ray)
+    for light_name in lights:
+        l = lights.get(light_name)
+        # Calculate shadow ray towards light source
+        shadow_ray = np.array(l.get('pos'))-point
+        # Calculate distance to light source
+        dist = np.linalg.norm(shadow_ray)
+        # Compute closest object in shadow ray trajectory
+        t, closest = find_closest(point, shadow_ray, objects, eps)
+        if(dist < t or t==-1):
+            angle = np.arccos((norm_vect@shadow_ray)/(np.linalg.norm(norm_vect)*np.linalg.norm(shadow_ray)))
+            if(angle < np.pi/2):
+                dimm = (np.pi/2-angle)/np.pi*2
+                bright += dimm*l.get('bright')
+    return bright
+
 # Computes colors recursively
-def compute_color(eye, ray, obj, eps, refl, curr, view_dist):
+def compute_color(eye, ray, obj, eps, refl, curr, view_dist, lights):
     if(curr <= refl):
         # Find closest object
         t, closest_obj = find_closest(eye, ray, obj, eps)
@@ -134,12 +169,20 @@ def compute_color(eye, ray, obj, eps, refl, curr, view_dist):
             # Compute reflection eye and ray
             eye_refl, ray_refl = reflection_ray(eye, ray, t, o, obj_type)
             # Compute color from reflection
-            b_refl, color_refl, refl_obj = compute_color(eye_refl, ray_refl, obj, eps, refl, curr+1, view_dist)
+            b_refl, color_refl, refl_obj = compute_color(eye_refl, ray_refl, obj, eps, refl, curr+1, view_dist, lights)
+            # Compute refraction eye and ray
+#            b_refr, eye_refr, ray_refr = refraction_ray(eye, ray, t, o, obj_type)
+            # Compute color from refraction
+#            color_refr, refr_obj = compute_color(eye_refr, ray_refr, obj, eps, refl, curr+1, view_dist, lights)
+            # Compute shadow
+            shadow_fact = shadow(eye, ray, t, lights, obj_type, o, obj, eps)
             # Return final color
             if(b_refl):
-                return True, 0.9*np.array(o.get('col'))+0.1*color_refl, closest_obj[1]+" -> "+refl_obj
+                color = shadow_fact*((1-o.get('refl'))*np.array(o.get('col'))+o.get('refl')*color_refl)
+                return True, color, closest_obj[1]+" -> "+refl_obj
             else:
-                return True, np.array(o.get('col')), closest_obj[1]+" -> None"
+                color = shadow_fact*(np.array(o.get('col')))
+                return True, color, closest_obj[1]+" -> None"
         # No closest object
         else:
             return False, [0, 0, 0], "Nothing"
@@ -160,7 +203,7 @@ def create_image(m, k, pixels, name):
     im = PIL.Image.new('RGB', (m,k), color = (255, 255, 255))
     for i in range(m):
         for j in range(k):
-            im.putpixel((i,j), (pixels[i, j, 0], pixels[i, j, 1], pixels[i, j, 2]))
+            im.putpixel((i,j), (int(pixels[i, j, 0]), int(pixels[i, j, 1]), int(pixels[i, j, 2])))
     im.save(name)
 
 # Transfrom m*k array to their average values in m_base*k_base array
@@ -198,6 +241,8 @@ def main():
     view_distance = view.get('dist')
     # Load all objects in scene
     objects = defs.get('objects')
+    # Load all lights
+    lights = defs.get('lights')
     
     m = ssample*m_base
     k = ssample*m_base
@@ -211,7 +256,7 @@ def main():
             print("Computing ray {} of {} ({}%)".format(i*k, m*k, i/m*100))
         for j in range(k):
             ray = compute_ray(m, k, i, j, eye, display, px_width, px_height)
-            b, color, obj = compute_color(eye, ray, objects, eps, refl_num, 0, view_distance)
+            b, color, obj = compute_color(eye, ray, objects, eps, refl_num, 0, view_distance, lights)
             if(b):
                 pixels[i, j] = color
             if(debug == 1 and i%(m/10) == 0 and j%(k/10) == 0):
