@@ -116,11 +116,21 @@ def reflection_ray(eye, ray, t, obj, obj_type):
     # Return new eye and ray
     return r_point, r_ray
 
+# Calculate Fresnel equations
+def fresnel(n1, n2, theta, phi):
+    # Fresnell parallel
+    F_paral = ((n2*np.cos(theta)-n1*np.cos(phi))/(n2*np.cos(theta)+n1*np.cos(phi)))**2
+    # Fresnell orthogonal
+    F_ortho = ((n1*np.cos(phi)-n2*np.cos(theta))/(n1*np.cos(phi)+n2*np.cos(theta)))**2
+    # Combine
+    F_refl = 0.5*(F_paral+F_ortho)
+    return F_refl, 1-F_refl
+
 # Compute refraction of the ray
 def refraction_ray(eye, ray, t, n, obj_enter, obj_type):
     n_t = obj_enter.get('refr')
     if(n_t == 0):
-        return False, eye, ray
+        return False, eye, ray, 1, 0
     # Calculate refraction point (new eye)
     r_point = eye+t*ray
     # Calculate normal vector to the object that will be entered
@@ -131,11 +141,13 @@ def refraction_ray(eye, ray, t, n, obj_enter, obj_type):
     phi = np.arccos(1-(n**2*(1-np.cos(theta)**2)/n_t**2))**2
     # Check that the angle is not over pi/2
     if(phi > np.pi/2 or phi < -np.pi/2):
+        # Calculate amount of light refracted and reflected
+        F_refl, F_refr = fresnel(n, n_t, theta, phi)
         # Calculate refracted ray
         ray_refr = (n*(ray+norm_vect*np.cos(theta))/n_t)-norm_vect*np.cos(phi)
         # Return eye and ray
-        return True, r_point, ray_refr
-    return False, r_point, ray
+        return True, r_point, ray_refr, F_refl, F_refr
+    return False, r_point, ray, 1, 0
 
 # Compute ambient light from above for a certain point
 def ambient_light(eye, ray, norm_vect, bright, objects, eps):
@@ -172,7 +184,7 @@ def shadow(eye, ray, t, lights, obj_type, obj, objects, eps, amb_light, amb_brig
                 bright += dist_factor*dimm*l.get('bright')
     if(amb_light == 1):
         bright += ambient_light(point, ray, norm_vect, amb_bright, objects, eps)
-    return bright
+    return bright    
 
 # Computes colors recursively
 def compute_color(eye, ray, n, obj, eps, refl, curr, view_dist, lights, shad_enab, amb_light, amb_bright):
@@ -187,17 +199,17 @@ def compute_color(eye, ray, n, obj, eps, refl, curr, view_dist, lights, shad_ena
             # Compute color from reflection
             b_refl, color_refl, refl_obj = compute_color(eye_refl, ray_refl, n, obj, eps, refl, curr+1, view_dist, lights, shad_enab, amb_light, amb_bright)
             # Compute refraction eye and ray
-            b_refr, eye_refr, ray_refr = refraction_ray(eye, ray, t, n, o, obj_type)
+            b_refr, eye_refr, ray_refr, F_refl, F_refr = refraction_ray(eye, ray, t, n, o, obj_type)
             # Compute color from refraction
             b, color_refr, refr_obj = compute_color(eye_refr, ray_refr, o.get('refr'), obj, eps, refl, curr+1, view_dist, lights, shad_enab, amb_light, amb_bright)
             # Compute shadow if enabled
             shadow_fact = 1 if (shad_enab == 0) else shadow(eye, ray, t, lights, obj_type, o, obj, eps, amb_light, amb_bright)
             # Return final color
             if(b_refr and b_refl):
-                color = shadow_fact*(((1-o.get('refl'))*np.array(o.get('col'))+o.get('refl')*color_refl)*0.7+0.3*np.array(color_refr))
+                color = shadow_fact*(np.array(o.get('col'))+F_refl*o.get('refl')*color_refl+F_refr*np.array(color_refr))
                 return True, color, closest_obj[1]+" ( -> "+refl_obj+") ( -> "+refr_obj+")"
             elif(b_refl):
-                color = shadow_fact*((1-o.get('refl'))*np.array(o.get('col'))+o.get('refl')*color_refl)
+                color = shadow_fact*(np.array(o.get('col'))+o.get('refl')*color_refl)
                 return True, color, closest_obj[1]+" -> "+refl_obj
             else:
                 color = shadow_fact*(np.array(o.get('col')))
@@ -222,12 +234,12 @@ def create_image(m, k, pixels, name):
     im = PIL.Image.new('RGB', (m,k), color = (255, 255, 255))
     for i in range(m):
         for j in range(k):
-            im.putpixel((i,j), (int(pixels[i, j, 0]), int(pixels[i, j, 1]), int(pixels[i, j, 2])))
+            im.putpixel((i,j), (int(pixels[i, j, 0]*255), int(pixels[i, j, 1]*255), int(pixels[i, j, 2]*255)))
     im.save(name)
 
 # Transfrom m*k array to their average values in m_base*k_base array
 def super_sample(m, k, m_base, k_base, pixels, ssample):
-    real_pixels = np.zeros((m, k, 3), dtype = np.uint64)
+    real_pixels = np.zeros((m, k, 3), dtype = np.float)
     for i in range(m_base):
         for j in range(k_base):
             average = np.zeros(3)
@@ -269,7 +281,7 @@ def main():
     m = ssample*m_base
     k = ssample*k_base
     print("Rendering supersample image of size", m, "x", k)
-    pixels = np.ones((m, k, 3), dtype = np.uint64)*20
+    pixels = np.ones((m, k, 3), dtype = np.float)*0.05
     px_width = 2*np.tan(np.deg2rad(fov_horizontal)/2)/m
     px_height = 2*np.tan(np.deg2rad(fov_vertical)/2)/k
     
