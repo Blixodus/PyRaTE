@@ -1,4 +1,4 @@
-# Simple Ray Tracer in Python
+# Python Ray Tracer Experiment (PyRaTE)
 
 Modify data.yaml to modify environment
 
