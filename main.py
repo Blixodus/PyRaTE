@@ -83,17 +83,6 @@ def find_closest(eye, ray, obj, eps):
                 closest_obj = (curr_type_name, curr_obj_name)
     return (t, closest_obj)
 
-# Compute reflection of the ray coming from the currently in use eye
-def reflection_ray(eye, ray, t, obj, obj_type):    
-    # Calculate reflection point (new eye)
-    r_point = eye+t*ray
-    # Calculate normal vector
-    norm_vect = norm_ray(obj_type, obj, r_point, ray)
-    # Calculate new ray
-    r_ray = ray-2*(ray@norm_vect)*norm_vect
-    # Return new eye and ray
-    return r_point, r_ray
-
 # Compute normal vector
 def norm_ray(obj_type, obj, r_point, ray):
     norm_vect = np.zeros(3)
@@ -116,12 +105,53 @@ def norm_ray(obj_type, obj, r_point, ray):
     norm_vect = -norm_vect/np.linalg.norm(norm_vect)
     return norm_vect
 
+# Compute reflection of the ray coming from the currently in use eye
+def reflection_ray(eye, ray, t, obj, obj_type):    
+    # Calculate reflection point (new eye)
+    r_point = eye+t*ray
+    # Calculate normal vector
+    norm_vect = norm_ray(obj_type, obj, r_point, ray)
+    # Calculate new ray
+    r_ray = ray-2*(ray@norm_vect)*norm_vect
+    # Return new eye and ray
+    return r_point, r_ray
+
 # Compute refraction of the ray
-def refraction_ray(eye, ray, t, obj, obj_type):
-    pass
+def refraction_ray(eye, ray, t, n, obj_enter, obj_type):
+    n_t = obj_enter.get('refr')
+    if(n_t == 0):
+        return False, eye, ray
+    # Calculate refraction point (new eye)
+    r_point = eye+t*ray
+    # Calculate normal vector to the object that will be entered
+    norm_vect = norm_ray(obj_type, obj_enter, r_point, ray)
+    # Calculate angle between ray and normal vector
+    theta = np.pi/2-np.arccos((norm_vect@ray)/(np.linalg.norm(norm_vect)*np.linalg.norm(ray)))
+    # Calculate angle of refraction ray
+    phi = np.arccos(1-(n**2*(1-np.cos(theta)**2)/n_t**2))**2
+    # Check that the angle is not over pi/2
+    if(phi > np.pi/2 or phi < -np.pi/2):
+        # Calculate refracted ray
+        ray_refr = (n*(ray+norm_vect*np.cos(theta))/n_t)-norm_vect*np.cos(phi)
+        # Return eye and ray
+        return True, r_point, ray_refr
+    return False, r_point, ray
+
+# Compute ambient light from above for a certain point
+def ambient_light(eye, ray, norm_vect, bright, objects, eps):
+    # Calculate shadow ray towards light source
+    shadow_ray = np.array([0, 0, -1])
+    # Compute closest object in shadow ray trajectory
+    t, closest = find_closest(eye, shadow_ray, objects, eps)
+    if(t<eps):
+        angle = np.arccos((norm_vect@shadow_ray)/(np.linalg.norm(norm_vect)*np.linalg.norm(shadow_ray)))
+        if(angle < np.pi/2 and angle > -np.pi/2):
+            dimm = (np.pi/2-angle)/np.pi*2
+            return dimm*bright
+    return np.array([0, 0, 0])
 
 # Compute how much light gets to a given point
-def shadow(eye, ray, t, lights, obj_type, obj, objects, eps):
+def shadow(eye, ray, t, lights, obj_type, obj, objects, eps, amb_light, amb_bright):
     # Calculate collision point
     point = eye+t*ray
     bright = 0.0
@@ -138,12 +168,14 @@ def shadow(eye, ray, t, lights, obj_type, obj, objects, eps):
             angle = np.arccos((norm_vect@shadow_ray)/(np.linalg.norm(norm_vect)*np.linalg.norm(shadow_ray)))
             if(angle < np.pi/2):
                 dimm = (np.pi/2-angle)/np.pi*2
-                dist_factor = l.get('dist')/dist
+                dist_factor = 1/(dist**2)
                 bright += dist_factor*dimm*l.get('bright')
+    if(amb_light == 1):
+        bright += ambient_light(point, ray, norm_vect, amb_bright, objects, eps)
     return bright
 
 # Computes colors recursively
-def compute_color(eye, ray, obj, eps, refl, curr, view_dist, lights, shad_enab):
+def compute_color(eye, ray, n, obj, eps, refl, curr, view_dist, lights, shad_enab, amb_light, amb_bright):
     if(curr <= refl):
         # Find closest object
         t, closest_obj = find_closest(eye, ray, obj, eps)
@@ -153,15 +185,18 @@ def compute_color(eye, ray, obj, eps, refl, curr, view_dist, lights, shad_enab):
             # Compute reflection eye and ray
             eye_refl, ray_refl = reflection_ray(eye, ray, t, o, obj_type)
             # Compute color from reflection
-            b_refl, color_refl, refl_obj = compute_color(eye_refl, ray_refl, obj, eps, refl, curr+1, view_dist, lights, shad_enab)
+            b_refl, color_refl, refl_obj = compute_color(eye_refl, ray_refl, n, obj, eps, refl, curr+1, view_dist, lights, shad_enab, amb_light, amb_bright)
             # Compute refraction eye and ray
-#            b_refr, eye_refr, ray_refr = refraction_ray(eye, ray, t, o, obj_type)
+            b_refr, eye_refr, ray_refr = refraction_ray(eye, ray, t, n, o, obj_type)
             # Compute color from refraction
-#            color_refr, refr_obj = compute_color(eye_refr, ray_refr, obj, eps, refl, curr+1, view_dist, lights, shad_enab)
+            b, color_refr, refr_obj = compute_color(eye_refr, ray_refr, o.get('refr'), obj, eps, refl, curr+1, view_dist, lights, shad_enab, amb_light, amb_bright)
             # Compute shadow if enabled
-            shadow_fact = 1 if (shad_enab == 0) else shadow(eye, ray, t, lights, obj_type, o, obj, eps)
+            shadow_fact = 1 if (shad_enab == 0) else shadow(eye, ray, t, lights, obj_type, o, obj, eps, amb_light, amb_bright)
             # Return final color
-            if(b_refl):
+            if(b_refr and b_refl):
+                color = shadow_fact*(((1-o.get('refl'))*np.array(o.get('col'))+o.get('refl')*color_refl)*0.7+0.3*np.array(color_refr))
+                return True, color, closest_obj[1]+" ( -> "+refl_obj+") ( -> "+refr_obj+")"
+            elif(b_refl):
                 color = shadow_fact*((1-o.get('refl'))*np.array(o.get('col'))+o.get('refl')*color_refl)
                 return True, color, closest_obj[1]+" -> "+refl_obj
             else:
@@ -192,13 +227,13 @@ def create_image(m, k, pixels, name):
 
 # Transfrom m*k array to their average values in m_base*k_base array
 def super_sample(m, k, m_base, k_base, pixels, ssample):
-    real_pixels = np.zeros((m, k, 3), dtype = np.uint8)
+    real_pixels = np.zeros((m, k, 3), dtype = np.uint64)
     for i in range(m_base):
         for j in range(k_base):
             average = np.zeros(3)
-            for k in range(ssample):
-                for l in range(ssample):
-                    average = average + pixels[i*ssample+k, j*ssample+l]
+            for x in range(ssample):
+                for y in range(ssample):
+                    average = average + pixels[i*ssample+x, j*ssample+y]
             real_pixels[i, j] = average/(ssample**2)
     return real_pixels
 
@@ -215,6 +250,8 @@ def main():
     refl_num = settings.get('refl_num')
     debug = settings.get('debug')
     shad_enab = settings.get('shadows')
+    amb_light = settings.get('ambient_light')
+    amb_bright = settings.get('ambient_bright')
     # Load all view data
     view = defs.get('view')
     m_base = int(view.get('m'))
@@ -237,11 +274,11 @@ def main():
     px_height = 2*np.tan(np.deg2rad(fov_vertical)/2)/k
     
     for i in range(m):
-        if(i%(m/10) == 0):
+        if(i%int(float(m)/10) == 0):
             print("Computing ray {} of {} ({}%)".format(i*k, m*k, i/m*100))
         for j in range(k):
             ray = compute_ray(m, k, i, j, eye, display, px_width, px_height)
-            b, color, obj = compute_color(eye, ray, objects, eps, refl_num, 0, view_distance, lights, shad_enab)
+            b, color, obj = compute_color(eye, ray, 1.0, objects, eps, refl_num, 0, view_distance, lights, shad_enab, amb_light, amb_bright)
             if(b):
                 pixels[i, j] = color
             if(debug == 1 and i%(m/10) == 0 and j%(k/10) == 0):
