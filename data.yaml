@@ -5,7 +5,7 @@ settings:
     refl_num: 5             # Maximum number of reflections and refractions
     debug: 0                # Debug on = 1, 2
     ambient_light: 1        # Ambient light (from above) on or off
-    ambient_bright: 10.0     # Ambient light brightness
+    ambient_bright: 10.0    # Ambient light brightness
     shadows: 0              # 0 disabled, 1 enabled
 view:
     m: 400              # Number of pixels horizontally
@@ -18,9 +18,9 @@ view:
 objects:
     spheres:
         sp1:
-            c: [20, 0, 0]      # Centre
+            c: [20, 0, 0]       # Centre
             r: 2                # Radius
-            col: [0, 1, 0]    # Color in RGB
+            col: [0, 1, 0]      # Colour in RGB
             refl: 0.5           # Reflectiveness
             refr: 0.2           # Refractiveness
 #        sp2:
@@ -46,8 +46,8 @@ objects:
 #    planes:
 #        floor:
 #            p: [0, 0, 5]           # A point on the plane
-#            norm_vect: [0, 0, 1]    # The normal vector to the plane
-#            col: [1, 1, 1]    # Color of the plane
+#            norm_vect: [0, 0, 1]   # The normal vector to the plane
+#            col: [1, 1, 1]         # Colour of the plane
 #            refl: 1
 #            refr: 0
 lights:
