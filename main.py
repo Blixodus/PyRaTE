@@ -15,6 +15,8 @@ import math
 # Import classes
 from Ray import *
 from Shape import *
+from Light import *
+from Bounding_Box import *
 
 # Compute ray e+t*d based on eye position and pixel i, j, returns d
 def compute_ray(m, k, i, j, eye, display, px_width, px_height):
