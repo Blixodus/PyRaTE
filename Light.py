@@ -8,6 +8,7 @@ Created on Mon Aug 19 09:18:01 2019
 
 import numpy as np
 import math
+from abc import abstractmethod
 
 from Ray import *
 from Shape import *
@@ -16,6 +17,24 @@ from main import find_closest
 class Light:
     
     # Compute how much light gets to a given point
+    @abstractmethod
+    def shadow(self, r_point, ray, obj, objects, eps):
+        pass
+
+class Ambient_Light(Light):
+    
+    def __init__(self, brightness):
+        self.brightness = brightness
+        
+    def shadow(self, r_point, ray, obj, objects, eps):
+        return self.brightness
+
+class Point_Light(Light):
+    
+    def __init__(self, point, brightness):
+        self.point = point
+        self.brightness = brightness
+    
     def shadow(self, r_point, ray, obj, objects, eps):
         norm_vect = obj.calculate_norm_vect(r_point, ray)
         vect_to_light = self.point-r_point
@@ -40,13 +59,7 @@ class Light:
                 return dist_factor*angle_factor*self.brightness
         # Return no light
         return 0
-                    
-class Point_Light(Light):
     
-    def __init__(self, point, brightness):
-        self.point = point
-        self.brightness = brightness
-        
 class Plane_Light(Light):
     
     def __init__(self, point, norm_vect, brightness=-1):

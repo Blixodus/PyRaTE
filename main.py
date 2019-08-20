@@ -26,9 +26,7 @@ def compute_ray(m, k, i, j, eye, display, px_width, px_height):
     real = point+display
     # Calculate vector in direction of eye to point
     vect = real-eye
-    # Create ray
-    ray = Ray(eye, vect)
-    return ray
+    return Ray(eye, vect)
 
 # Find the closest object that instersects a ray
 def find_closest(eye, ray, obj, eps):
@@ -55,76 +53,6 @@ def find_closest(eye, ray, obj, eps):
                 t = t_new
                 closest_obj = (curr_type_name, curr_obj_name)
     return (t, closest_obj)
-
-# Calculate Fresnel equations
-def fresnel(n1, n2, theta, phi):
-    # Fresnell parallel
-    F_paral = ((n2*math.cos(theta)-n1*math.cos(phi))/(n2*math.cos(theta)+n1*math.cos(phi)))**2
-    # Fresnell orthogonal
-    F_ortho = ((n1*math.cos(phi)-n2*math.cos(theta))/(n1*math.cos(phi)+n2*math.cos(theta)))**2
-    # Combine
-    F_refl = 0.5*(F_paral+F_ortho)
-    return F_refl, 1-F_refl
-
-# Compute refraction of the ray
-def refraction_ray(eye, ray, t, n, obj_enter, obj_type):
-    n_t = obj_enter.get('refr')
-    if(n_t == 0):
-        return False, eye, ray, 1, 0
-    # Calculate refraction point (new eye)
-    r_point = eye+t*ray
-    # Calculate normal vector to the object that will be entered
-    norm_vect = norm_ray(obj_type, obj_enter, r_point, ray)
-    # Calculate angle between ray and normal vector
-    theta = np.pi/2-math.acos((norm_vect@ray)/(np.linalg.norm(norm_vect)*np.linalg.norm(ray)))
-    # Calculate angle of refraction ray
-    phi = np.arccos(1-(n**2*(1-math.cos(theta)**2)/n_t**2))**2
-    # Check that the angle is not over pi/2
-    if(phi > np.pi/2 or phi < -np.pi/2):
-        # Calculate amount of light refracted and reflected
-        F_refl, F_refr = fresnel(n, n_t, theta, phi)
-        # Calculate refracted ray
-        ray_refr = (n*(ray+norm_vect*math.cos(theta))/n_t)-norm_vect*math.cos(phi)
-        # Return eye and ray
-        return True, r_point, ray_refr, F_refl, F_refr
-    return False, r_point, ray, 1, 0
-
-# Compute ambient light from above for a certain point
-def ambient_light(eye, ray, norm_vect, bright, objects, eps):
-    # Calculate shadow ray towards light source
-    shadow_ray = np.array([0, 0, -1])
-    # Compute closest object in shadow ray trajectory
-    t, closest = find_closest(eye, shadow_ray, objects, eps)
-    if(t<eps):
-        angle = np.arccos((norm_vect@shadow_ray)/(np.linalg.norm(norm_vect)*np.linalg.norm(shadow_ray)))
-        if(angle < np.pi/2 and angle > -np.pi/2):
-            dimm = (np.pi/2-angle)/np.pi*2
-            return dimm*bright
-    return np.array([0, 0, 0])
-
-# Compute how much light gets to a given point
-def shadow(eye, ray, t, lights, obj_type, obj, objects, eps, amb_light, amb_bright):
-    # Calculate collision point
-    point = eye+t*ray
-    bright = 0.0
-    norm_vect = norm_ray(obj_type, obj, point, ray)
-    for light_name in lights:
-        l = lights.get(light_name)
-        # Calculate shadow ray towards light source
-        shadow_ray = np.array(l.get('pos'))-point
-        # Calculate distance to light source
-        dist = np.linalg.norm(shadow_ray)
-        # Compute closest object in shadow ray trajectory
-        t, closest = find_closest(point, shadow_ray, objects, eps)
-        if(dist < t or t==-1):
-            angle = math.acos((norm_vect@shadow_ray)/(np.linalg.norm(norm_vect)*np.linalg.norm(shadow_ray)))
-            if(angle < np.pi/2):
-                dimm = (np.pi/2-angle)/np.pi*2
-                dist_factor = 1/(dist**2)
-                bright += dist_factor*dimm*l.get('bright')
-    if(amb_light == 1):
-        bright += ambient_light(point, ray, norm_vect, amb_bright, objects, eps)
-    return bright    
 
 # Computes colors recursively
 def compute_colour(ray, n, obj, eps, refl, curr, view_dist, lights, shad_enab, amb_light, amb_bright):
@@ -189,7 +117,21 @@ def super_sample(m, k, m_base, k_base, pixels, ssample):
             real_pixels[i, j] = average/(ssample**2)
     return real_pixels
 
-
+def compute_canvas(m, k, eye, display, px_width, px_height, objects, eps, refl_num, view_distance, lights, shad_enab, amb_light, amb_bright, debug):
+    pixels = np.ones((m, k, 3), dtype = np.float)*0.05
+    for i in range(m):
+        if(i%int(float(m)/10) == 0):
+            print("Computing ray {} of {} ({}%)".format(i*k, m*k, i/m*100))
+        for j in range(k):
+            ray = compute_ray(m, k, i, j, eye, display, px_width, px_height)
+            b, color, obj = compute_colour(ray, 1.0, objects, eps, refl_num, 0, view_distance, lights, shad_enab, amb_light, amb_bright)
+            if(b):
+                pixels[i, j] = color
+            if(debug == 1 and i%(m/10) == 0 and j%(k/10) == 0):
+                print("DEBUG:", i, j, obj, j)
+            if(debug == 2 and obj != "Nothing"):
+                print("DEBUG:", i, j, obj, j)
+    return pixels
 
 def main():
     begin = time.time()
@@ -218,26 +160,16 @@ def main():
     # Load all lights
     lights = defs.get('lights')
     
+    # Calculate needed values
     m = ssample*m_base
     k = ssample*k_base
     print("Rendering supersample image of size", m, "x", k)
-    pixels = np.ones((m, k, 3), dtype = np.float)*0.05
     px_width = 2*np.tan(np.deg2rad(fov_horizontal)/2)/m
     px_height = 2*np.tan(np.deg2rad(fov_vertical)/2)/k
+    # Compute the colors for all pixels
+    pixels = compute_canvas(m, k, eye, display, px_width, px_height, objects, eps, refl_num, view_distance, lights, shad_enab, amb_light, amb_bright, debug)
     
-    for i in range(m):
-        if(i%int(float(m)/10) == 0):
-            print("Computing ray {} of {} ({}%)".format(i*k, m*k, i/m*100))
-        for j in range(k):
-            ray = compute_ray(m, k, i, j, eye, display, px_width, px_height)
-            b, color, obj = compute_colour(ray, 1.0, objects, eps, refl_num, 0, view_distance, lights, shad_enab, amb_light, amb_bright)
-            if(b):
-                pixels[i, j] = color
-            if(debug == 1 and i%(m/10) == 0 and j%(k/10) == 0):
-                print("DEBUG:", i, j, obj, j)
-            if(debug == 2 and obj != "Nothing"):
-                print("DEBUG:", i, j, obj, j)
-                    
+    # Create final images                   
     print("Creating file named rt_output_big.png for large aliased image")
     create_image(m, k, pixels, "rt_output_big.png")
     print("Rendering final image of size", m_base, "x", k_base)
@@ -245,6 +177,7 @@ def main():
     print("Creating file named rt_output.png for anti-aliased image")
     create_image(m_base, k_base, real_pixels, "rt_output.png")
     
+    # Print time spent
     end = time.time()
     print("Rendered in", end-begin, "seconds")
 
