@@ -10,15 +10,15 @@ import numpy as np
 import math
 from abc import abstractmethod
 
-from Ray import *
-from Shape import *
-from main import find_closest
+from RT_Ray import *
+from RT_Shape import *
+from RT_Bounding_Box import *
 
 class Light:
     
     # Compute how much light gets to a given point
     @abstractmethod
-    def shadow(self, r_point, ray, obj, objects, eps):
+    def shadow(self, r_point, ray, obj, bbox):
         pass
 
 class Ambient_Light(Light):
@@ -26,7 +26,7 @@ class Ambient_Light(Light):
     def __init__(self, brightness):
         self.brightness = brightness
         
-    def shadow(self, r_point, ray, obj, objects, eps):
+    def shadow(self, r_point, ray, obj, bbox):
         return self.brightness
 
 class Point_Light(Light):
@@ -35,15 +35,15 @@ class Point_Light(Light):
         self.point = point
         self.brightness = brightness
     
-    def shadow(self, r_point, ray, obj, objects, eps):
+    def shadow(self, r_point, ray, obj, bbox):
         norm_vect = obj.calculate_norm_vect(r_point, ray)
         vect_to_light = self.point-r_point
         # Calculate distance to light source
         dist = np.linalg.norm(vect_to_light)
         # Calculate shadow ray towards light source
-        shadow_ray = Ray(r_point, vect_to_light)
+        shadow_ray = Ray(r_point, vect_to_light, None)
         # Compute closest object in shadow ray trajectory
-        t, closest = find_closest(shadow_ray, objects, eps)
+        t, closest = bbox.find_closest(shadow_ray)
         # Verify if object is in the way
         if(dist < t or t==-1):
             # Angle between shadow ray and object normal vector

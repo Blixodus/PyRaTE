@@ -37,21 +37,21 @@ objects:
                     col: [0.5, 0.2, 0.2]
                     refl: 0.2
                     refr: 1.5
-            triangles:
-                t1:
-                    p1:
-                    p2:
-                    p3:
-                    col:
-                    refl:
-                    refr:
-        planes:
-            floor:
-                p: [0, 0, 5]           # A point on the plane
-                norm_vect: [0, 0, 1]   # The normal vector to the plane
-                col: [1, 1, 1]         # Colour of the plane
-                refl: 1
-                refr: 0
+#            triangles:
+#                t1:
+#                    p1:
+#                    p2:
+#                    p3:
+#                    col:
+#                    refl:
+#                    refr:
+#        planes:
+#            floor:
+#                p: [0, 0, 5]           # A point on the plane
+#                norm_vect: [0, 0, 1]   # The normal vector to the plane
+#                col: [1, 1, 1]         # Colour of the plane
+#                refl: 1
+#                refr: 0
 lights:
     l1:
         pos: [7, 5, 0]

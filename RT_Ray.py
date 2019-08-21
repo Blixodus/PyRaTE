@@ -8,8 +8,6 @@ Created on Fri Aug 16 17:13:35 2019
 
 import numpy as np
 
-from Shape import *
-
 class Ray:
     
     def __init__(self, eye, vect, obj):

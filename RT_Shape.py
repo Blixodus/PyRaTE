@@ -10,8 +10,8 @@ import numpy as np
 import math
 from abc import abstractmethod
 
-from Ray import *
-from Light import *
+from RT_Ray import Ray
+from RT_Light import *
 
 class Shape:
     
@@ -24,7 +24,7 @@ class Shape:
         # Calculate new ray
         r_ray_vect = ray.vect-2*(ray@norm_vect)*norm_vect
         # Return new eye and ray
-        return Ray(r_point, r_ray_vect)
+        return Ray(r_point, r_ray_vect, ray.obj)
     
     
     # Calculate Fresnel equations
@@ -40,6 +40,7 @@ class Shape:
     # TODO
     def calculate_refraction(self, t : float, ray : Ray) -> Ray:
         n_t = self.refr_index
+        n = ray.current_refr_index()
         if(n_t == 0):
             return False, ray, 1, 0
         # Calculate refraction point (new eye)
@@ -53,15 +54,15 @@ class Shape:
         # Check that the angle is not over pi/2
         if(phi > np.pi/2 or phi < -np.pi/2):
             # Calculate amount of light refracted and reflected
-            F_refl, F_refr = fresnel(n, n_t, theta, phi)
+            F_refl, F_refr = self.fresnel(n, n_t, theta, phi)
             # Calculate refracted ray
-            refr_ray = Ray(r_point,(n*(ray+norm_vect*math.cos(theta))/n_t)-norm_vect*math.cos(phi))
+            refr_ray = Ray(r_point, (n*(ray+norm_vect*math.cos(theta))/n_t)-norm_vect*math.cos(phi), self)
             # Return eye and ray
             return True, refr_ray, F_refl, F_refr
         return False, ray, 1, 0
     
     @abstractmethod
-    def intersection(self, ray : Ray) -> float:
+    def intersection(self, ray : Ray) -> (float, 'Shape'):
         pass
     
     @abstractmethod
@@ -72,9 +73,8 @@ class Shape:
     def edge_points(self) -> (np.ndarray(3), np.ndarray(3)):
         pass
     
-    @abstractmethod
-    def compute_color(self, r_point : np.ndarray(3), ray : Ray) -> np.ndarray(3):
-        pass
+    def compute_colour(self, r_point : np.ndarray(3), ray : Ray) -> np.ndarray(3):
+        return self.colour
     
 class Sphere(Shape):
     
@@ -94,17 +94,17 @@ class Sphere(Shape):
         dis = (d@(e-c))**2-(d@d)*((e-c)@(e-c)-r**2)
         # If discriminant is 0, return unique solution
         if(dis == 0):
-            return (-d@(e-c))/(d@d)
+            return (-d@(e-c))/(d@d), self
         # If discriminant is positive, return minimum distance
         elif(dis > 0):
             dist1 = ((-d)@(e-c)+math.sqrt(dis))/(d@d)
             dist2 = ((-d)@(e-c)-math.sqrt(dis))/(d@d)
             # If one of the distances is negative, return the positive one
             if(dist1 < 0 or dist2 < 0):
-                return max(dist1, dist2)
-            return min(dist1, dist2)
+                return max(dist1, dist2), self
+            return min(dist1, dist2), self
         # Otherwise return value behind camera
-        return -1
+        return -1, self
     
     def calculate_norm_vect(self, r_point, ray):
         # Normal vector is vector between point and centre
@@ -116,13 +116,9 @@ class Sphere(Shape):
     def edge_points(self):
         return self.centre-self.radius, self.centre+self.radius
     
-    # TODO
-    def compute_color(self, r_point, ray):
-        pass
-    
 class Plane(Shape):
     
-    def __init__(self, norm_vect, point=np.array([0,0,0]), colour=[0,0,0], refr_index):
+    def __init__(self, norm_vect, refr_index, point=np.array([0,0,0]), colour=[0,0,0]):
         self.point = point
         self.norm_vect = norm_vect/np.linalg.norm(norm_vect)
         self.colour = colour
@@ -136,8 +132,8 @@ class Plane(Shape):
         # If ray is not parallel to the plane
         if(d@norm_vect != 0):
             # Return distance
-            return -((e-p)@norm_vect)/(d@norm_vect)
-        return -1
+            return -((e-p)@norm_vect)/(d@norm_vect), self
+        return -1, self
     
     def calculate_norm_vect(self, r_point, ray):
         if(self.norm_vect@ray<0):
@@ -146,10 +142,6 @@ class Plane(Shape):
     
     # TODO (?)
     def edge_points(self):
-        pass
-    
-    # TODO
-    def compute_color(self, r_point, ray):
         pass
     
 class Triangle(Shape):
@@ -164,15 +156,11 @@ class Triangle(Shape):
         
     # TODO
     def intersection(self, ray):
-        return -1
+        return -1, self
         
     def calculate_norm_vect(self, r_point, ray):
         return self.plane.calculate_norm_vect(r_point, ray)
     
     # TODO
     def edge_points(self):
-        pass
-    
-    # TODO
-    def compute_color(self, r_point, ray):
         pass
