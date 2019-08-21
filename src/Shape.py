@@ -10,8 +10,8 @@ import numpy as np
 import math
 from abc import abstractmethod
 
-from RT_Ray import Ray
-from RT_Light import *
+from Ray import Ray
+from Light import *
 
 class Shape:
     

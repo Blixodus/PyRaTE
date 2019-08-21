@@ -1,3 +1,2 @@
-rt_output.png
-rt_output_big.png
-__pycache__/*
+output/*
+src/__pycache__/*

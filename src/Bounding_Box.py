@@ -8,8 +8,8 @@ Created on Mon Aug 19 13:18:50 2019
 
 import numpy as np
 
-from RT_Shape import *
-from RT_Ray import *
+from Shape import *
+from Ray import *
 
 class Bounding_Box:
     

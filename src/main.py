@@ -13,10 +13,10 @@ import yaml
 import time
 import math
 # Import classes
-from RT_Ray import *
-from RT_Shape import *
-from RT_Light import *
-from RT_Bounding_Box import *
+from Ray import *
+from Shape import *
+from Light import *
+from Bounding_Box import *
 
 # Compute ray e+t*d based on eye position and pixel i, j, returns d
 def compute_ray(m, k, i, j, eye, display, px_width, px_height):
@@ -29,7 +29,7 @@ def compute_ray(m, k, i, j, eye, display, px_width, px_height):
     return Ray(eye, vect, None)
 
 # Computes colors recursively
-def compute_colour(ray, bbox, refl, curr, view_dist, lights, shad_enab, amb_light, amb_bright):
+def compute_colour(ray, bbox, lights, refl, curr, view_dist, shad_enab, amb_light, amb_bright):
     if(curr <= refl):
         # Find closest object
         t, closest_obj = bbox.find_closest(ray)
@@ -99,7 +99,7 @@ def compute_canvas(m, k, eye, display, px_width, px_height, bbox, refl_num, view
             print("Computing ray {} of {} ({}%)".format(i*k, m*k, i/m*100))
         for j in range(k):
             ray = compute_ray(m, k, i, j, eye, display, px_width, px_height)
-            b, colour= compute_colour(ray, bbox, refl_num, 0, view_distance, lights, shad_enab, amb_light, amb_bright)
+            b, colour= compute_colour(ray, bbox, lights, refl_num, 0, view_distance, shad_enab, amb_light, amb_bright)
             if(b):
                 pixels[i, j] = colour
     return pixels
@@ -107,7 +107,7 @@ def compute_canvas(m, k, eye, display, px_width, px_height, bbox, refl_num, view
 def main():
     begin = time.time()
     # Get values from file
-    defs = read_data("data.yaml")
+    defs = read_data("../data.yaml")
     # Load all settings
     settings = defs.get('settings')
     ssample = int(settings.get('ssample'))
@@ -145,11 +145,11 @@ def main():
     
     # Create final images                   
     print("Creating file named rt_output_big.png for large aliased image")
-    create_image(m, k, pixels, "rt_output_big.png")
+    create_image(m, k, pixels, "../outputs/rt_output_big.png")
     print("Rendering final image of size", m_base, "x", k_base)
     real_pixels = super_sample(m, k, m_base, k_base, pixels, ssample)
     print("Creating file named rt_output.png for anti-aliased image")
-    create_image(m_base, k_base, real_pixels, "rt_output.png")
+    create_image(m_base, k_base, real_pixels, "../outputs/rt_output.png")
     
     # Print time spent
     end = time.time()

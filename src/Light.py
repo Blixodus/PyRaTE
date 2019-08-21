@@ -10,9 +10,9 @@ import numpy as np
 import math
 from abc import abstractmethod
 
-from RT_Ray import *
-from RT_Shape import *
-from RT_Bounding_Box import *
+from Ray import *
+from Shape import *
+from Bounding_Box import *
 
 class Light:
     
