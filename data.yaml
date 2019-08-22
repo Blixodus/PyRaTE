@@ -7,8 +7,8 @@ settings:
     ambient_bright: 10.0    # Ambient light brightness
     shadows: 0              # 0 disabled, 1 enabled
 view:
-    m: 400              # Number of pixels horizontally
-    k: 400              # Number of pixels vertically
+    m: 200              # Number of pixels horizontally
+    k: 200              # Number of pixels vertically
     fov_horizontal: 90  # Field of view horizontally
     fov_vertical: 90    # Field of view vertically
     eye: [0, 0, 0]      # Eye location in space

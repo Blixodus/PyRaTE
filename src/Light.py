@@ -56,10 +56,9 @@ class Point_Light(Light):
             # Angle between shadow ray and object normal vector
             # TODO : Find out why np.pi- required
             angle = np.pi-math.acos((norm_vect@shadow_ray.vect)/(np.linalg.norm(norm_vect)*np.linalg.norm(shadow_ray.vect)))
-            #print('angle', angle)
-            if(angle < np.pi/2):
+            if(abs(angle) < np.pi/2):
                 # How much light is dimmed by the angle
-                angle_factor = (np.pi/2-angle)/np.pi*2
+                angle_factor = (np.pi/2-abs(angle))/np.pi*2
                 # How much light is dimmed by the distance
                 dist_factor = 1/(dist**2)
                 # If light has been set to be equally bright at every distance

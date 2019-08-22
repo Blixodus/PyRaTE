@@ -11,6 +11,7 @@ import numpy as np
 import PIL
 import yaml
 import time
+from multiprocessing import Process, Array
 # Import classes
 from Ray import *
 from Shape import *
@@ -98,16 +99,32 @@ def super_sample(m, k, m_base, k_base, pixels, ssample):
             real_pixels[i, j] = average/(ssample**2)
     return real_pixels
 
+def compute_pixel(colours, i, m, k, eye, display, px_width, px_height, bbox, refl_num, view_distance, lights, shad_enab, amb_light, amb_bright, debug):
+    for j in range(k):
+        ray = compute_ray(m, k, i, j, eye, display, px_width, px_height)
+        b, col= compute_colour(ray, bbox, lights, refl_num, 0, view_distance, shad_enab, amb_light, amb_bright)
+        if(b):
+            colours[j] = col.tolist()
+        else:
+            colours[j] = [0.05, 0.05, 0.05]
+
 def compute_canvas(m, k, eye, display, px_width, px_height, bbox, refl_num, view_distance, lights, shad_enab, amb_light, amb_bright, debug):
-    pixels = np.ones((m, k, 3), dtype = np.float)*0.05
+    pixels = np.ones((m, k, 3), dtype = np.float)
     for i in range(m):
         if(i%int(float(m)/10) == 0):
             print("Computing ray {} of {} ({}%)".format(i*k, m*k, i/m*100))
+#        colour = Array('d', range(k, 3))
+#        p = Process(target=compute_pixel, args=(colour, i, m, k, eye, display, px_width, px_height, bbox, refl_num, view_distance, lights, shad_enab, amb_light, amb_bright, debug))
+#        p.start()
+#        p.join()
+#        pixels[i] = np.array(colour)
         for j in range(k):
             ray = compute_ray(m, k, i, j, eye, display, px_width, px_height)
-            b, colour= compute_colour(ray, bbox, lights, refl_num, 0, view_distance, shad_enab, amb_light, amb_bright)
+            b, col= compute_colour(ray, bbox, lights, refl_num, 0, view_distance, shad_enab, amb_light, amb_bright)
             if(b):
-                pixels[i, j] = colour
+                pixels[i, j] = col
+            else:
+                pixels[i, j] = np.array([0,0,0])
     return pixels
 
 def main():
