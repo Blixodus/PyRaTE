@@ -21,7 +21,6 @@ class Bounding_Box:
     def update_size(self):
         # Get all max and min coordinates
         maxs, mins = zip(*[obj.edge_points() for obj in self.items])
-        print(maxs, mins)
         for m in mins:
             self.min_point = np.minimum(m, self.min_point)
         for m in maxs:

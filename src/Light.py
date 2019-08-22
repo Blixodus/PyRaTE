@@ -20,6 +20,12 @@ class Light:
     @abstractmethod
     def shadow(self, r_point, ray, obj, bbox):
         pass
+    
+    def all_shadows(r_point, ray, obj, bbox, lights):
+        result_brightness = 0.0
+        for light in lights:
+            result_brightness += light.shadow(r_point, ray, obj, bbox)
+        return result_brightness
 
 class Ambient_Light(Light):
     
@@ -44,10 +50,13 @@ class Point_Light(Light):
         shadow_ray = Ray(r_point, vect_to_light, None)
         # Compute closest object in shadow ray trajectory
         t, closest = bbox.find_closest(shadow_ray)
+        #print('t', t)
         # Verify if object is in the way
         if(dist < t or t==-1):
             # Angle between shadow ray and object normal vector
-            angle = math.acos((norm_vect@shadow_ray)/(np.linalg.norm(norm_vect)*np.linalg.norm(shadow_ray)))
+            # TODO : Find out why np.pi- required
+            angle = np.pi-math.acos((norm_vect@shadow_ray.vect)/(np.linalg.norm(norm_vect)*np.linalg.norm(shadow_ray.vect)))
+            #print('angle', angle)
             if(angle < np.pi/2):
                 # How much light is dimmed by the angle
                 angle_factor = (np.pi/2-angle)/np.pi*2

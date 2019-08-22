@@ -16,13 +16,11 @@ from Light import *
 class Shape:
     
     # Compute reflection of the ray coming from the currently in use eye
-    def calculate_reflection(self, t : float, ray : Ray) -> Ray:
-        # Calculate reflection point (new eye)
-        r_point = ray.point(t)
+    def calculate_reflection(self, r_point : np.ndarray(3), ray : Ray) -> Ray:
         # Calculate normal vector
         norm_vect = self.calculate_norm_vect(r_point, ray)
         # Calculate new ray
-        r_ray_vect = ray.vect-2*(ray@norm_vect)*norm_vect
+        r_ray_vect = ray.vect-2*(ray.vect@norm_vect)*norm_vect
         # Return new eye and ray
         return Ray(r_point, r_ray_vect, ray.obj)
     
@@ -73,8 +71,26 @@ class Shape:
     def edge_points(self) -> (np.ndarray(3), np.ndarray(3)):
         pass
     
-    def compute_colour(self, r_point : np.ndarray(3), ray : Ray) -> np.ndarray(3):
-        return self.colour
+    def compute_colour(self, r_point : np.ndarray(3), ray : Ray, bbox, lights, refl_max, curr_refl) -> np.ndarray(3):
+#        if(curr_refl > 0):
+#            print(self.colour)
+        # Calculate colour of reflection
+        refl_colour = np.array([0,0,0])
+        b_refl = False
+        if(curr_refl <= refl_max):
+            refl_ray = self.calculate_reflection(r_point, ray)
+            t, obj = bbox.intersection(ray)
+            if(t > 10e-4):
+                refl_colour = obj.compute_colour(refl_ray.point(t), refl_ray, bbox, lights, refl_max, curr_refl+1)
+                b_refl = True
+        # Calculate brightness of the spot
+        brightness = Light.all_shadows(r_point, ray, self, bbox, lights)
+#        if(curr_refl > 0):
+#            print(brightness)
+        if(b_refl):
+            #print('reflection!', refl_colour)
+            return refl_colour
+        return self.colour*brightness
     
 class Sphere(Shape):
     
@@ -109,7 +125,7 @@ class Sphere(Shape):
     def calculate_norm_vect(self, r_point, ray):
         # Normal vector is vector between point and centre
         norm_vect = r_point-self.centre
-        if(norm_vect@ray<0):
+        if(norm_vect@ray.vect<0):
             norm_vect = -norm_vect
         return norm_vect
     
@@ -136,7 +152,7 @@ class Plane(Shape):
         return -1, self
     
     def calculate_norm_vect(self, r_point, ray):
-        if(self.norm_vect@ray<0):
+        if(self.norm_vect@ray.vect<0):
             return -self.norm_vect
         return self.norm_vect
     

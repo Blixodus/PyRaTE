@@ -11,7 +11,6 @@ import numpy as np
 import PIL
 import yaml
 import time
-import math
 # Import classes
 from Ray import *
 from Shape import *
@@ -30,39 +29,46 @@ def compute_ray(m, k, i, j, eye, display, px_width, px_height):
 
 # Computes colors recursively
 def compute_colour(ray, bbox, lights, refl, curr, view_dist, shad_enab, amb_light, amb_bright):
-    if(curr <= refl):
-        # Find closest object
-        t, closest_obj = bbox.find_closest(ray)
-        if(t>=0 and (t<=view_dist or view_dist == -1)):
-            r_point = ray.point(t)
-            return True, closest_obj.compute_colour(r_point, ray)
-        # No closest object
-        else:
-            return False, [0, 0, 0]
-    # Reflection limit reached
-    return False, [0, 0, 0]
+    # Find closest object
+    t, closest_obj = bbox.find_closest(ray)
+    if(t>=0 and (t<=view_dist or view_dist == -1)):
+        r_point = ray.point(t)
+        return True, closest_obj.compute_colour(r_point, ray, bbox, lights, refl, 0)
+    # No closest object
+    else:
+        return False, [0, 0, 0]
     
 def generate_scene_objects(object_defs):
-    print(1)
-    result = None
     for obj in object_defs:
         if(obj == 'bbox'):
-            print(obj)
             bbox = Bounding_Box()
             contents = generate_scene_objects(object_defs.get('bbox'))
-            bbox.add(contents)
+            if(type(contents) is list):
+                bbox.add(*contents)
+            else:
+                bbox.add(contents)
             return bbox
         elif(obj == 'spheres'):
-            c = object_defs.get('spheres').get('sp1').get('c')
-            r = object_defs.get('spheres').get('sp1').get('r')
-            col = object_defs.get('spheres').get('sp1').get('col')
-            refr = object_defs.get('spheres').get('sp1').get('refr')
-            sp1 = Sphere(np.array(c), r, np.array(col), refr)
-            print(2)
-            return sp1
+            spheres = []
+            for sp in object_defs.get('spheres'):
+                c = object_defs.get('spheres').get(sp).get('c')
+                r = object_defs.get('spheres').get(sp).get('r')
+                col = object_defs.get('spheres').get(sp).get('col')
+                refr = object_defs.get('spheres').get(sp).get('refr')
+                sphere = Sphere(np.array(c), r, np.array(col), refr)
+                spheres.append(sphere)
+            return spheres
             
 def generate_scene_lights(light_defs):
-    pass
+    result = []
+    for l in light_defs:
+        if(l == 'point_lights'):
+            for pl in light_defs.get(l):
+                point = light_defs.get(l).get(pl).get('pos')
+                brightness = light_defs.get(l).get(pl).get('bright')
+                light = Point_Light(point, brightness)
+                result.append(light)
+    return result
 
 # Read variables and other data from YAML file
 def read_data(name):
@@ -111,7 +117,6 @@ def main():
     # Load all settings
     settings = defs.get('settings')
     ssample = int(settings.get('ssample'))
-    eps = settings.get('epsilon')
     refl_num = settings.get('refl_num')
     debug = settings.get('debug')
     shad_enab = settings.get('shadows')
