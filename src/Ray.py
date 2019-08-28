@@ -3,7 +3,7 @@
 """
 Created on Fri Aug 16 17:13:35 2019
 
-@author: atte
+@author: Atte Torri
 """
 
 import numpy as np

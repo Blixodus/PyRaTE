@@ -3,7 +3,7 @@
 """
 Created on Sun Aug 18 18:34:39 2019
 
-@author: atte
+@author: Atte Torri
 """
 
 import numpy as np
@@ -72,8 +72,6 @@ class Shape:
         pass
     
     def compute_colour(self, r_point : np.ndarray(3), ray : Ray, bbox, lights, refl_max, curr_refl) -> np.ndarray(3):
-#        if(curr_refl > 0):
-#            print(self.colour)
         # Calculate colour of reflection
         refl_colour = np.array([0,0,0])
         b_refl = False
@@ -81,15 +79,14 @@ class Shape:
             refl_ray = self.calculate_reflection(r_point, ray)
             t, obj = bbox.intersection(ray)
             if(t > 10e-4):
+                print(self, obj)
                 refl_colour = obj.compute_colour(refl_ray.point(t), refl_ray, bbox, lights, refl_max, curr_refl+1)
                 b_refl = True
         # Calculate brightness of the spot
-        brightness = Light.all_shadows(r_point, ray, self, bbox, lights)
-#        if(curr_refl > 0):
-#            print(brightness)
+        brightness = Light.all_shadows(r_point, ray, self, bbox, lights)+0.1
         if(b_refl):
             #print('reflection!', refl_colour)
-            return refl_colour
+            return refl_colour*brightness
         return self.colour*brightness
     
 class Sphere(Shape):
